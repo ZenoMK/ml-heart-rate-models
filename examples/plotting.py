@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 
-def plot_workout_predictions(model, workout):
+def plot_workout_predictions(model, workout, savepath):
     """
     Large plot of a single workout.
     The plot is divided into two subplots:
@@ -80,3 +80,4 @@ def plot_workout_predictions(model, workout):
     ax_bottom.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M"))
     ax_bottom.set_xlabel("Time")
     ax_bottom.set_xlim(time_in_datetime[0], time_in_datetime[-1])
+    plt.savefig(savepath)
