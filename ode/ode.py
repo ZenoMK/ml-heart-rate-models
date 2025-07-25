@@ -14,6 +14,7 @@ from ode.modules_cnn import CNNEncoder
 from ode.data import WorkoutDatasetConfig
 from torchdiffeq import odeint
 from ode.modules_dense_nn import PersonalizedScalarNN, DenseNN, PersonalizationType
+from ode.metabolomics_encoder import MetabolomicsEncoder
 
 EPSILON = 1e-3
 
@@ -89,10 +90,12 @@ class OdeConfig:
     clip_gradient: float = 5.0
 
     # embeddings
-    subject_embedding_dim: int = 8
-    encoder_embedding_dim: int = 8
+
+    # TODO are those the actual values from Apple paper?
+    subject_embedding_dim: int = 16
+    encoder_embedding_dim: int = 16
     encoder_kernel_size: int = 6
-    encoder_layers: str = "128"
+    encoder_layers: str = "64"
 
     # regularization
     embedding_reg_strength: float = 1.0
@@ -114,7 +117,11 @@ class OdeConfig:
     ranges_A_B_alpha_beta: str = "-3 5, -3 5, 0.1 3, 0.1 3"
     range_activity_fn: str = "30 250"
 
-    python_start: str = datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
+    metabolomics_encoder_input_dim: int = -1
+    metabolomics_encoder_hidden_dim: int = 64
+    metabolomics_encoder_output_dim: int = 16
+
+python_start: str = datetime.datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
 
 
 class EmbeddingStore(nn.Module):
@@ -166,7 +173,17 @@ class EmbeddingStore(nn.Module):
         self.encoder = None
         self.initialize_encoder()
 
-        self.dim_embedding = self.subject_embedding_dim + self.encoder_embedding_dim
+        self.metabolomics_encoder_input_dim = ode_config.metabolomics_encoder_input_dim
+        self.metabolomics_encoder_hidden_dim = ode_config.metabolomics_encoder_hidden_dim
+        self.metabolomics_encoder_output_dim = ode_config.metabolomics_encoder_output_dim
+
+        self.metabolomics_encoder = MetabolomicsEncoder(
+            metabolomics_encoder_input_dim=self.metabolomics_encoder_input_dim,
+            metabolomics_encoder_hidden_dim=self.metabolomics_encoder_hidden_dim,
+            metabolomics_encoder_output_dim=self.metabolomics_encoder_output_dim
+        )
+
+        self.dim_embedding = self.subject_embedding_dim + self.encoder_embedding_dim + self.metabolomics_encoder_output_dim
 
     def initialize_subject_embeddings(self):
         """
@@ -218,6 +235,8 @@ class EmbeddingStore(nn.Module):
         if self.encoder is not None:
             encoded_embeddings = self.encoder(history, history_lengths)
             embeddings.append(encoded_embeddings)
+        if self.metabolomics_encoder is not None:
+            metabolomics_embedding = self.metabolomics_encoder
 
         embeddings = torch.cat(embeddings, dim=-1)
         return embeddings

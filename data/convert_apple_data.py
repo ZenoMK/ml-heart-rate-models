@@ -48,7 +48,7 @@ def interpolate_to_uniform_grid(times: List[float], values: List[float],
         return np.array([]), np.array([])
 
 
-def normalize_heart_rate(hr_values: np.ndarray, min_hr: float = 40, max_hr: float = 220) -> np.ndarray:
+def normalize_heart_rate(hr_values: np.ndarray, min_hr: float = 40, max_hr: float = 200) -> np.ndarray:
     """
     Normalize heart rate values for neural networks.
     Apple's models typically use min-max normalization.
@@ -71,7 +71,7 @@ def preview_filtering_effects(input_csv: str):
     if not validate_input_data(df):
         return
 
-    print(f"\nOriginal dataset: {len(df)} workouts from {df['directory_two_above'].nunique()} users")
+    print(f"\nOriginal dataset: {len(df)} workouts from {df['gods21_id'].nunique()} users")
 
     # Analyze duration distribution
     print(f"\nDuration analysis:")
@@ -80,7 +80,7 @@ def preview_filtering_effects(input_csv: str):
     print(f"- Workouts > 120 min: {(df['duration_minutes'] > 120).sum()}")
 
     # Analyze user workout counts
-    user_counts = df['directory_two_above'].value_counts()
+    user_counts = df['gods21_id'].value_counts()
     print(f"\nUser workout count analysis:")
     print(f"- Users with ≥10 workouts: {(user_counts >= 10).sum()}")
     print(f"- Users with <10 workouts: {(user_counts < 10).sum()}")
@@ -91,14 +91,14 @@ def preview_filtering_effects(input_csv: str):
 
     # Show what filtering would do
     duration_filtered = df[(df['duration_minutes'] >= 15) & (df['duration_minutes'] <= 120)]
-    user_workout_counts_filtered = duration_filtered['directory_two_above'].value_counts()
+    user_workout_counts_filtered = duration_filtered['gods21_id'].value_counts()
     users_with_min_workouts = user_workout_counts_filtered[user_workout_counts_filtered >= 10].index
-    final_preview = duration_filtered[duration_filtered['directory_two_above'].isin(users_with_min_workouts)]
+    final_preview = duration_filtered[duration_filtered['gods21_id'].isin(users_with_min_workouts)]
 
     print(f"\nFiltering preview:")
     print(f"- After duration filter: {len(duration_filtered)} workouts")
     print(
-        f"- After user count filter: {len(final_preview)} workouts from {final_preview['directory_two_above'].nunique()} users")
+        f"- After user count filter: {len(final_preview)} workouts from {final_preview['gods21_id'].nunique()} users")
     print(
         f"- Total reduction: {len(df) - len(final_preview)} workouts ({(len(df) - len(final_preview)) / len(df) * 100:.1f}%)")
 
@@ -114,7 +114,7 @@ def validate_input_data(df: pd.DataFrame) -> bool:
         True if valid, False otherwise
     """
     required_columns = [
-        'log_id', 'directory_two_above', 'duration_minutes',
+        'log_id', 'gods21_id', 'duration_minutes',
         'measurements', 'relative_times_seconds', 'speed',
         'activity_name', 'start_time', 'age', 'gender',
         'max_hr', 'min_hr'
@@ -130,7 +130,7 @@ def validate_input_data(df: pd.DataFrame) -> bool:
     print(f"✓ All required columns present")
 
     # Check for empty essential columns
-    essential_cols = ['log_id', 'directory_two_above', 'duration_minutes', 'measurements', 'relative_times_seconds']
+    essential_cols = ['log_id', 'gods21_id', 'duration_minutes', 'measurements', 'relative_times_seconds']
     for col in essential_cols:
         null_count = df[col].isna().sum()
         if null_count > 0:
@@ -155,7 +155,7 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
     """
     print("Applying filters...")
     initial_count = len(df)
-    initial_users = df['directory_two_above'].nunique()
+    initial_users = df['gods21_id'].nunique()
 
     print(f"Initial dataset: {initial_count} workouts from {initial_users} users")
 
@@ -175,7 +175,7 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
 
     # Filter 2: Users with at least 10 workouts
     # Count workouts per user in duration-filtered data
-    user_workout_counts = duration_filtered['directory_two_above'].value_counts()
+    user_workout_counts = duration_filtered['gods21_id'].value_counts()
     users_with_min_workouts = user_workout_counts[user_workout_counts >= 10].index
     users_excluded = user_workout_counts[user_workout_counts < 10]
 
@@ -185,19 +185,19 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
     if len(users_excluded) > 0:
         print(f"- Excluded users' workout counts: {users_excluded.tolist()}")
 
-    final_filtered = duration_filtered[duration_filtered['directory_two_above'].isin(users_with_min_workouts)]
+    final_filtered = duration_filtered[duration_filtered['gods21_id'].isin(users_with_min_workouts)]
 
     workouts_removed_by_user_filter = len(duration_filtered) - len(final_filtered)
 
     print(
         f"User filter (≥10 workouts): removed {workouts_removed_by_user_filter} workouts from users with <10 workouts")
-    print(f"FINAL RESULT: {len(final_filtered)} workouts from {final_filtered['directory_two_above'].nunique()} users")
+    print(f"FINAL RESULT: {len(final_filtered)} workouts from {final_filtered['gods21_id'].nunique()} users")
     print(
         f"Total removed: {initial_count - len(final_filtered)} workouts ({(initial_count - len(final_filtered)) / initial_count * 100:.1f}%)")
 
     if len(final_filtered) > 0:
         # Show final statistics
-        final_user_counts = final_filtered['directory_two_above'].value_counts()
+        final_user_counts = final_filtered['gods21_id'].value_counts()
         print(
             f"Final user workout counts: min={final_user_counts.min()}, max={final_user_counts.max()}, mean={final_user_counts.mean():.1f}")
 
@@ -275,7 +275,7 @@ def convert_fitbit_to_apple_format(input_csv: str, output_feather: str,
 
     print("Loading Fitbit data...")
     df = pd.read_csv(input_csv)
-    print(f"Loaded {len(df)} workouts from {df['directory_two_above'].nunique()} users")
+    print(f"Loaded {len(df)} workouts from {df['gods21_id'].nunique()} users")
 
     # Validate input data
     if not validate_input_data(df):
@@ -304,6 +304,8 @@ def convert_fitbit_to_apple_format(input_csv: str, output_feather: str,
 
             # Ensure same length
             min_length = min(len(hr_measurements), len(time_measurements))
+            if len(hr_measurements) != len(time_measurements):
+                raise ValueError("HR measurements and time_measurements length mismatch")
             hr_measurements = hr_measurements[:min_length]
             time_measurements = time_measurements[:min_length]
 
@@ -322,6 +324,7 @@ def convert_fitbit_to_apple_format(input_csv: str, output_feather: str,
                 speed_times = np.arange(0, len(speed_measurements)) * 60  # Every minute
                 if len(speed_times) > 1:
                     try:
+                        # TODO consider again if this is 100% right
                         f_speed = interpolate.interp1d(speed_times, speed_measurements,
                                                        kind='linear', bounds_error=False,
                                                        fill_value='extrapolate')
@@ -331,13 +334,13 @@ def convert_fitbit_to_apple_format(input_csv: str, output_feather: str,
                         pass
 
             # Normalize heart rate
-            normalized_hr = normalize_heart_rate(uniform_hr)
+            normalized_hr = normalize_heart_rate(uniform_hr, min_hr=row['min_hr'], max_hr= row['max_hr'])
 
             # Create workout record for Apple format
             workout_data = {
                 # Required columns for Apple model
-                'user_id': row['directory_two_above'],  # User identifier
-                'workout_id': f"{row['directory_two_above']}_{row['log_id']}",  # Unique workout ID
+                'user_id': row['gods21_id'],  # User identifier
+                'workout_id': f"{row['gods21_id']}_{row['log_id']}",  # Unique workout ID
                 'time_seconds': uniform_times.tolist(),  # Uniform time grid
                 'heart_rate': uniform_hr.tolist(),  # Heart rate measurements
                 'heart_rate_normalized': normalized_hr.tolist(),  # Normalized HR
@@ -410,92 +413,175 @@ def convert_fitbit_to_apple_format(input_csv: str, output_feather: str,
     final_df.reset_index(drop=True).to_feather(output_feather)
     print(f"Saved to {output_feather}")
 
+    analyze_all_patients(final_df, "data_summary.txt")
 
     return final_df
 
-def create_alternative_format(input_csv: str, output_feather: str, apply_filtering: bool = True):
+
+def analyze_all_patients(df: pd.DataFrame, output_file: str = "data_summary.txt"):
     """
-    Alternative format where each row is a complete workout (not time-series).
-    This might be more suitable depending on Apple's exact requirements.
+    Create comprehensive analysis for all patients and save to file.
+
+    Args:
+        df: DataFrame with converted workout data
+        output_file: Path to save the analysis
     """
-    print("Creating alternative workout-per-row format...")
-    df = pd.read_csv(input_csv)
+    print("\n" + "=" * 80)
+    print("COMPREHENSIVE PATIENT ANALYSIS")
+    print("=" * 80)
 
-    # Validate input data
-    if not validate_input_data(df):
-        return None
+    analysis_lines = []
+    analysis_lines.append("=" * 80)
+    analysis_lines.append("COMPREHENSIVE PATIENT ANALYSIS")
+    analysis_lines.append("=" * 80)
+    analysis_lines.append(f"Generated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    analysis_lines.append("")
 
-    # Apply same filtering
-    if apply_filtering:
-        df = apply_filters(df)
-        if len(df) == 0:
-            print("ERROR: No workouts remain after filtering!")
-            return None
+    # Overall dataset statistics
+    total_workouts = len(df)
+    total_users = df['user_id'].nunique()
 
-    converted_data = []
+    overall_stats = [
+        f"OVERALL DATASET STATISTICS:",
+        f"- Total running workouts: {total_workouts:,}",
+        f"- Total users: {total_users}",
+        f"- Average workouts per user: {total_workouts / total_users:.1f}",
+        f"- Training workouts: {df['in_train'].sum():,} ({df['in_train'].mean() * 100:.1f}%)",
+        f"- Test workouts: {(~df['in_train']).sum():,} ({(~df['in_train']).mean() * 100:.1f}%)",
+        ""
+    ]
 
-    for idx, row in df.iterrows():
-        try:
-            hr_measurements = parse_list_column(row['measurements'])
-            time_measurements = parse_list_column(row['relative_times_seconds'])
-            speed_measurements = parse_list_column(row['speed'])
+    for line in overall_stats:
+        print(line)
+        analysis_lines.append(line)
 
-            if not hr_measurements or not time_measurements:
-                continue
+    # Per-user detailed analysis
+    print("PER-USER DETAILED ANALYSIS:")
+    analysis_lines.append("PER-USER DETAILED ANALYSIS:")
+    analysis_lines.append("-" * 50)
 
-            min_length = min(len(hr_measurements), len(time_measurements))
-            hr_measurements = hr_measurements[:min_length]
-            time_measurements = time_measurements[:min_length]
+    for user_id in sorted(df['user_id'].unique()):
+        user_data = df[df['user_id'] == user_id].copy()
+        user_data['start_time'] = pd.to_datetime(user_data['start_time'])
+        user_data = user_data.sort_values('start_time')
 
-            # Interpolate to uniform grid
-            uniform_times, uniform_hr = interpolate_to_uniform_grid(
-                time_measurements, hr_measurements, target_interval=10.0
-            )
+        # Basic info
+        total_user_workouts = len(user_data)
+        train_workouts = user_data['in_train'].sum()
+        test_workouts = total_user_workouts - train_workouts
 
-            if len(uniform_hr) == 0:
-                continue
+        # Duration statistics
+        duration_stats = user_data['duration_minutes'].describe()
+        duration_sum = user_data['duration_minutes'].sum()
 
-            # Pad or truncate to fixed length (e.g., 450 time points as mentioned in Endomondo)
-            target_length = 450
-            if len(uniform_hr) > target_length:
-                uniform_hr = uniform_hr[:target_length]
-                uniform_times = uniform_times[:target_length]
-            else:
-                # Pad with last values
-                pad_length = target_length - len(uniform_hr)
-                uniform_hr = np.pad(uniform_hr, (0, pad_length), mode='edge')
-                uniform_times = np.pad(uniform_times, (0, pad_length), mode='edge')
+        # Heart rate statistics (from lists)
+        all_hr_values = []
+        all_speeds = []
+        total_time_points = 0
 
-            normalized_hr = normalize_heart_rate(uniform_hr)
+        for _, workout in user_data.iterrows():
+            hr_list = workout['heart_rate']
+            speed_list = workout['horizontal_speed_kph']
 
-            workout_record = {
-                'user_id': row['directory_two_above'],
-                'workout_id': f"{row['directory_two_above']}_{row['log_id']}",
-                'activity_type': row['activity_name'],
-                'duration_minutes': row['duration_minutes'],
-                'age': row['age'],
-                'gender': row['gender'],
-                'max_hr_theoretical': row['max_hr'],
-                'min_hr_observed': row['min_hr'],
-            }
+            if isinstance(hr_list, list) and len(hr_list) > 0:
+                all_hr_values.extend(hr_list)
+                total_time_points += len(hr_list)
 
-            # Add heart rate as separate columns (HR_0, HR_1, HR_2, ...)
-            for i, hr_val in enumerate(uniform_hr):
-                workout_record[f'HR_{i}'] = hr_val
-                workout_record[f'HR_norm_{i}'] = normalized_hr[i]
-                workout_record[f'time_{i}'] = uniform_times[i]
+            if isinstance(speed_list, list) and len(speed_list) > 0:
+                # Convert m/s to km/h for display
+                speed_kmh = [s * 3.6 for s in speed_list if s > 0]
+                all_speeds.extend(speed_kmh)
 
-            converted_data.append(workout_record)
+        hr_stats = {
+            'min': min(all_hr_values) if all_hr_values else 0,
+            'max': max(all_hr_values) if all_hr_values else 0,
+            'mean': sum(all_hr_values) / len(all_hr_values) if all_hr_values else 0
+        }
 
-        except Exception as e:
-            print(f"Error processing workout {idx}: {e}")
-            continue
+        speed_stats = {
+            'min': min(all_speeds) if all_speeds else 0,
+            'max': max(all_speeds) if all_speeds else 0,
+            'mean': sum(all_speeds) / len(all_speeds) if all_speeds else 0
+        } if all_speeds else {'min': 0, 'max': 0, 'mean': 0}
 
-    alt_df = pd.DataFrame(converted_data)
-    alt_df.to_feather(output_feather.replace('.feather', '_alternative.feather'))
-    print(f"Alternative format saved with shape: {alt_df.shape}")
+        # Date range
+        date_range = f"{user_data['start_time'].min().strftime('%Y-%m-%d')} to {user_data['start_time'].max().strftime('%Y-%m-%d')}"
 
-    return alt_df
+        # User demographics
+        age = user_data['age'].iloc[0]
+        gender = user_data['gender'].iloc[0]
+        max_hr_theoretical = user_data['max_hr_theoretical'].iloc[0]
+        min_hr_observed = user_data['min_hr_observed'].iloc[0]
+
+        # Create user summary
+        user_summary = [
+            f"\nUSER: {user_id}",
+            f"  Demographics:",
+            f"    - Age: {age} years",
+            f"    - Gender: {gender}",
+            f"    - Theoretical Max HR: {max_hr_theoretical} bpm",
+            f"    - Observed Min HR: {min_hr_observed} bpm",
+            f"  Workout Summary:",
+            f"    - Total workouts: {total_user_workouts}",
+            f"    - Training workouts: {train_workouts}",
+            f"    - Test workouts: {test_workouts}",
+            f"    - Date range: {date_range}",
+            f"    - Total data points: {total_time_points:,}",
+            f"  Duration Statistics (minutes):",
+            f"    - Min: {duration_stats['min']:.1f}",
+            f"    - Max: {duration_stats['max']:.1f}",
+            f"    - Mean: {duration_stats['mean']:.1f}",
+            f"    - Total running time: {duration_sum:.1f} min ({duration_sum/60:.1f} hours)",  # Fixed line
+            f"  Heart Rate Statistics (bpm):",
+            f"    - Min: {hr_stats['min']:.1f}",
+            f"    - Max: {hr_stats['max']:.1f}",
+            f"    - Mean: {hr_stats['mean']:.1f}",
+            f"  Speed Statistics (km/h):",
+            f"    - Min: {speed_stats['min']:.1f}",
+            f"    - Max: {speed_stats['max']:.1f}",
+            f"    - Mean: {speed_stats['mean']:.1f}",
+        ]
+
+        for line in user_summary:
+            print(line)
+            analysis_lines.append(line)
+
+    # Add summary statistics across all users
+    user_workout_counts = df.groupby('user_id').size()
+    user_duration_totals = df.groupby('user_id')['duration_minutes'].sum()
+
+    summary_stats = [
+        "",
+        "CROSS-USER SUMMARY STATISTICS:",
+        f"  Workouts per user:",
+        f"    - Min: {user_workout_counts.min()}",
+        f"    - Max: {user_workout_counts.max()}",
+        f"    - Mean: {user_workout_counts.mean():.1f}",
+        f"    - Median: {user_workout_counts.median():.1f}",
+        f"  Total running time per user (hours):",
+        f"    - Min: {user_duration_totals.min() / 60:.1f}",
+        f"    - Max: {user_duration_totals.max() / 60:.1f}",
+        f"    - Mean: {user_duration_totals.mean() / 60:.1f}",
+        f"    - Total across all users: {user_duration_totals.sum() / 60:.1f} hours",
+        "",
+        "DATA QUALITY METRICS:",
+        f"  - Average time points per workout: {df['workout_length'].mean():.1f}",
+        f"  - Total data points across all workouts: {df['workout_length'].sum():,}",
+        f"  - Users with >20 workouts: {(user_workout_counts > 20).sum()}",
+        f"  - Users with >50 workouts: {(user_workout_counts > 50).sum()}",
+    ]
+
+    for line in summary_stats:
+        print(line)
+        analysis_lines.append(line)
+
+    # Save to file
+    with open(output_file, 'w', encoding='utf-8') as f:
+        for line in analysis_lines:
+            f.write(line + '\n')
+
+    print(f"\n✓ Analysis saved to {output_file}")
+    print("=" * 80)
 
 
 if __name__ == "__main__":
@@ -514,4 +600,7 @@ if __name__ == "__main__":
     # Convert to Apple format with filtering
     df_apple = convert_fitbit_to_apple_format(input_file, output_file, apply_filtering=True)
 
-    print("Done")
+    if df_apple is not None:
+        print(f"\n✓ Comprehensive analysis completed")
+        print(f"✓ Individual patient statistics saved to data_summary.txt")
+        print("Done")

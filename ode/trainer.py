@@ -167,6 +167,7 @@ def evaluate(model: ODEModel, epoch, test_dataloader, start_time, train_workout_
         "l2": lambda x, y: ((x - y) ** 2).mean().item() ** 0.5,
         "l1": lambda x, y: (np.abs(x - y)).mean().item(),
         "relative": lambda pred, truth: (np.abs(pred - truth) / truth).mean().item(),
+        "correlation": lambda pred, truth: np.corrcoef(pred, truth)[0, 1] if len(pred) > 1 else np.nan,
     }
 
     logged_data_for_all_workouts = []
@@ -218,6 +219,23 @@ def evaluate(model: ODEModel, epoch, test_dataloader, start_time, train_workout_
             logged_data_for_all_workouts[~train_flag]["l1-after2min"].mean(),
             logged_data_for_all_workouts[~train_flag]["relative-after2min"].mean()
             * 100,
+        ),
+        sep="\n",
+    )
+    correlation_stats = logged_data_for_all_workouts[~train_flag]["correlation"].dropna()
+    correlation_after2min_stats = logged_data_for_all_workouts[~train_flag]["correlation-after2min"].dropna()
+    print(
+        "Test median correlation: %.3f [IQR: %.3f-%.3f]"
+        % (
+            correlation_stats.median(),
+            correlation_stats.quantile(0.25),
+            correlation_stats.quantile(0.75),
+        ),
+        "Test median correlation-after2min: %.3f [IQR: %.3f-%.3f]"
+        % (
+            correlation_after2min_stats.median(),
+            correlation_after2min_stats.quantile(0.25),
+            correlation_after2min_stats.quantile(0.75),
         ),
         sep="\n",
     )
