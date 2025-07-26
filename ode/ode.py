@@ -5,6 +5,7 @@
 
 import datetime
 from dataclasses import dataclass
+import numpy as np
 
 import pandas as pd
 import torch
@@ -150,6 +151,8 @@ class EmbeddingStore(nn.Module):
         self,
         ode_config: OdeConfig,
         workouts_info: pd.DataFrame,
+        metabolomics_dict=None,
+        workout_to_gods_mapping=None
     ):
         super().__init__()
         # subject embedding parameters
@@ -173,6 +176,9 @@ class EmbeddingStore(nn.Module):
         self.encoder = None
         self.initialize_encoder()
 
+        self.metabolomics_dict = metabolomics_dict
+        self.workout_to_gods_mapping = workout_to_gods_mapping
+
         self.metabolomics_encoder_input_dim = ode_config.metabolomics_encoder_input_dim
         self.metabolomics_encoder_hidden_dim = ode_config.metabolomics_encoder_hidden_dim
         self.metabolomics_encoder_output_dim = ode_config.metabolomics_encoder_output_dim
@@ -184,6 +190,26 @@ class EmbeddingStore(nn.Module):
         )
 
         self.dim_embedding = self.subject_embedding_dim + self.encoder_embedding_dim + self.metabolomics_encoder_output_dim
+        self.metabolomics_min = None
+        self.metabolomics_max = None
+        if metabolomics_dict:
+            self._compute_metabolomics_normalization_params()
+
+
+    def _compute_metabolomics_normalization_params(self):
+        """Compute global min/max across all metabolomics data for normalization"""
+        all_values = []
+        for gods_id, data in self.metabolomics_dict.items():
+            if 'm' in data:
+                metabolomics_data = data['m']
+                if isinstance(metabolomics_data, list):
+                    all_values.extend(metabolomics_data)
+                else:
+                    all_values.extend(metabolomics_data.flatten())
+
+        self.metabolomics_min = float(np.min(all_values))
+        self.metabolomics_max = float(np.max(all_values))
+        print(f"Metabolomics normalization range: [{self.metabolomics_min:.4f}, {self.metabolomics_max:.4f}]")
 
     def initialize_subject_embeddings(self):
         """
@@ -221,6 +247,33 @@ class EmbeddingStore(nn.Module):
             kernel_size=self.encoder_kernel_size,
         )
 
+    def get_metabolomics_data_for_workouts(self, workout_ids):
+        """Get metabolomics data for given workout IDs using gods21_id"""
+        if self.metabolomics_dict is None:
+            return None
+
+        metabolomics_tensors = []
+        for wid in workout_ids:
+            gods_id = self.workout_to_gods_mapping.get(wid)
+
+            # Try both string and int versions of gods_id
+            metabolomics_data = None
+            if gods_id:
+                # Try as string first
+                if gods_id in self.metabolomics_dict:
+                    metabolomics_data = self.metabolomics_dict[gods_id]
+                # Try as int if it's numeric
+                elif gods_id.isdigit() and int(gods_id) in self.metabolomics_dict:
+                    metabolomics_data = self.metabolomics_dict[int(gods_id)]
+
+            metabolomics_tensor = np.array(metabolomics_data['m'], dtype=np.float32)
+            metabolomics_tensor = (metabolomics_tensor - self.metabolomics_min) / (
+                        self.metabolomics_max - self.metabolomics_min)
+            metabolomics_tensors.append(metabolomics_tensor)
+
+
+        return torch.FloatTensor(np.array(metabolomics_tensors))
+
     def get_embeddings_from_workout_ids(
         self, workout_ids, history=None, history_lengths=None
     ):
@@ -236,7 +289,10 @@ class EmbeddingStore(nn.Module):
             encoded_embeddings = self.encoder(history, history_lengths)
             embeddings.append(encoded_embeddings)
         if self.metabolomics_encoder is not None:
-            metabolomics_embedding = self.metabolomics_encoder
+            metabolomics_data = self.get_metabolomics_data_for_workouts(workout_ids)
+            if metabolomics_data is not None:
+                metabolomics_embedding = self.metabolomics_encoder(metabolomics_data)
+                embeddings.append(metabolomics_embedding)
 
         embeddings = torch.cat(embeddings, dim=-1)
         return embeddings
@@ -295,6 +351,8 @@ class ODEModel(nn.Module):
         self,
         workouts_info,
         config: OdeConfig,
+        metabolomics_dict=None,
+        workout_to_gods_mapping=None
     ):
         super().__init__()
         self.config = config
@@ -305,6 +363,8 @@ class ODEModel(nn.Module):
         self.embedding_store = EmbeddingStore(
             self.config,
             workouts_info,
+            metabolomics_dict = metabolomics_dict,
+            workout_to_gods_mapping = workout_to_gods_mapping
         )
         self.dim_embedding = self.embedding_store.dim_embedding
         self.ode_parameter_layers = [

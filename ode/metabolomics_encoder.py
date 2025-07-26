@@ -16,11 +16,13 @@ class MetabolomicsEncoder(nn.Module):
 
 
         self.metabolomics_encoder = nn.Sequential(
-            nn.Linear(self.metabolomics_encoder_input_dim, self.metabolomics_encoder_hidden_dim),
+            nn.Linear(self.metabolomics_encoder_input_dim, 1024),
             nn.ReLU(),
-            nn.Linear(self.metabolomics_encoder_hidden_dim, self.metabolomics_encoder_hidden_dim),
+            nn.Linear(1024, 512),
             nn.ReLU(),
-            nn.Linear(self.metabolomics_encoder_hidden_dim, self.metabolomics_encoder_output_dim),
+            nn.Linear(512, 128),
+            nn.ReLU(),
+            nn.Linear(128, self.metabolomics_encoder_output_dim),
             nn.ReLU()
         )
 
