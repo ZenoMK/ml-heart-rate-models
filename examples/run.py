@@ -13,6 +13,7 @@ from ode.ode import ODEModel, OdeConfig
 from ode.trainer import train_ode_model
 from ode.eval import *
 from ode.baseline_average_hr import BaselineAverageHRModel, evaluate_baseline_model
+from ode.embedding_regressions import train_regression_models, get_embeddings_and_targets
 
 df = pd.read_feather("../data/apple_format_data.feather")
 print("Loading metabolomics data...")
@@ -50,7 +51,7 @@ train_dataset = WorkoutDataset(df[df["in_train"]], data_config_train)
 # TODO whether the eval is actually just on test data
 test_dataset = WorkoutDataset(df, data_config_test)
 
-train_dataloader, test_dataloader = make_dataloaders(train_dataset, test_dataset, batch_size=16)
+train_dataloader, test_dataloader = make_dataloaders(train_dataset, test_dataset, batch_size=8)
 
 ode_config = OdeConfig(
     data_config_train,
@@ -58,8 +59,8 @@ ode_config = OdeConfig(
     seed=0,
     n_epochs=100,
     subject_embedding_dim=16,
-    encoder_embedding_dim=32,
-    metabolomics_encoder_output_dim=24,
+    encoder_embedding_dim=16,
+    metabolomics_encoder_output_dim=8,
     metabolomics_encoder_hidden_dim=128,
     metabolomics_encoder_input_dim=metabolomics_dim
 
@@ -80,14 +81,22 @@ evaluation_logs = train_ode_model(model, train_dataloader, test_dataloader, trai
 
 # After training is complete, analyze the final epoch results:
 final_epoch_results = evaluation_logs[-1]  # Last epoch DataFrame
-save_paper_results(evaluation_logs[-1], model_name="Heart Rate Model with Metabolomics (1e-3) (1024_512_128_Out)")
+save_paper_results(evaluation_logs[-1], model_name="Heart Rate Model with Metabolomics (1e-3)(256_64_8) batch 8")
 
 baseline_model = BaselineAverageHRModel()
 baseline_model.fit(train_dataset)
 baseline_results = evaluate_baseline_model(baseline_model, test_dataset, train_workout_ids)
 save_paper_results(baseline_results, model_name="Baseline: Subject Average HR")
 
+
+print("Extracting embeddings and targets...")
+embeddings, bmis, ages = get_embeddings_and_targets(model, df, test_dataset)  # or train_dataset
+print(f"Found {len(embeddings)} subjects with complete data")
+
+print("\nTraining regression models...")
+train_regression_models(embeddings, bmis, ages)
+
 # Generate paper-ready results:
 for i in range(len(test_dataset)):
     workout = test_dataset[i]
-    plot_workout_predictions(model, workout, savepath=f"results/predplots/predictions{i}.png")
+    plot_workout_predictions(model, workout, savepath=f"results/predplots/predictions{i}_(M_1e-3).png")

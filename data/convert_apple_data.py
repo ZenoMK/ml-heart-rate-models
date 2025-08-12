@@ -117,7 +117,7 @@ def validate_input_data(df: pd.DataFrame) -> bool:
         'log_id', 'gods21_id', 'duration_minutes',
         'measurements', 'relative_times_seconds', 'speed',
         'activity_name', 'start_time', 'age', 'gender',
-        'max_hr', 'min_hr'
+        'max_hr', 'min_hr', 'calories'
     ]
 
     missing_columns = [col for col in required_columns if col not in df.columns]
@@ -354,6 +354,7 @@ def convert_fitbit_to_apple_format(input_csv: str, output_feather: str,
                 'gender': row['gender'],
                 'max_hr_theoretical': row['max_hr'],
                 'min_hr_observed': row['min_hr'],
+                'calories': row['calories'],
 
                 # Workout statistics
                 'workout_length': len(uniform_hr),
@@ -390,6 +391,7 @@ def convert_fitbit_to_apple_format(input_csv: str, output_feather: str,
             'age': workout['age'],
             'gender': workout['gender'],
             'max_hr_theoretical': workout['max_hr_theoretical'],
+            'calories': workout['calories'],
             'min_hr_observed': workout['min_hr_observed'],
             'workout_length': workout['workout_length'],
             'avg_hr': workout['avg_hr'],
@@ -586,7 +588,7 @@ def analyze_all_patients(df: pd.DataFrame, output_file: str = "data_summary.txt"
 
 if __name__ == "__main__":
     # Usage example
-    input_file = "gods_trajectories.csv"  # Your current CSV
+    input_file = "gods_trajectories_with_calories.csv"  # Your current CSV
     output_file = "apple_format_data.feather"  # Output for Apple model
 
     print("=" * 60)

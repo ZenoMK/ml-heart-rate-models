@@ -16,14 +16,11 @@ class MetabolomicsEncoder(nn.Module):
 
 
         self.metabolomics_encoder = nn.Sequential(
-            nn.Linear(self.metabolomics_encoder_input_dim, 1024),
+            nn.Linear(self.metabolomics_encoder_input_dim, 256),
             nn.ReLU(),
-            nn.Linear(1024, 512),
+            nn.Linear(256, 64),
             nn.ReLU(),
-            nn.Linear(512, 128),
-            nn.ReLU(),
-            nn.Linear(128, self.metabolomics_encoder_output_dim),
-            nn.ReLU()
+            nn.Linear(64, self.metabolomics_encoder_output_dim)
         )
 
     def forward(self, metabolomics_data):
